@@ -183,6 +183,8 @@ fun ArrayVisualizer(
     modifier: Modifier = Modifier,
     isInteractive: Boolean = true,
     showControls: Boolean = true,
+    teacherComment: String? = null,
+    teacherEmotion: CharacterEmotion = CharacterEmotion.THINKING,
     onElementClick: ((index: Int, value: String) -> Unit)? = null,
     onArrayStateChanged: ((List<String>) -> Unit)? = null
 ) {
@@ -195,19 +197,43 @@ fun ArrayVisualizer(
         onArrayStateChanged?.invoke(state.elements)
     }
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp)),
-        color = Color(0xFF131F24),
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, DuoInputBorder),
-        shadowElevation = 4.dp
-    ) {
-        Column(
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Teacher mascot guidance above visualizer if provided
+        if (!teacherComment.isNullOrBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DuoCharacter(
+                    emotion = teacherEmotion,
+                    size = 56.dp,
+                    showAura = false
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                CharacterSpeechBubble(
+                    message = teacherComment,
+                    pointerDirection = BubblePointerDirection.LEFT,
+                    backgroundColor = DuoCardBg,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .clip(RoundedCornerShape(20.dp)),
+            color = Color(0xFF131F24),
+            border = androidx.compose.foundation.BorderStroke(1.5.dp, DuoInputBorder),
+            shadowElevation = 4.dp
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
             // Header Bar: Memory & Capacity Metadata
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -350,6 +376,7 @@ fun ArrayVisualizer(
             }
         }
     }
+}
 
     // Operation Input Dialog for direct manipulation
     if (showOperationDialog != null) {

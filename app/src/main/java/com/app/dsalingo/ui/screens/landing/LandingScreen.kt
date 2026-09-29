@@ -14,9 +14,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.dsalingo.ui.components.BubblePointerDirection
+import com.app.dsalingo.ui.components.CharacterEmotion
+import com.app.dsalingo.ui.components.CharacterSpeechBubble
 import com.app.dsalingo.ui.components.DuoButton
 import com.app.dsalingo.ui.components.DuoSecondaryButton
 import com.app.dsalingo.ui.components.DuoBackpackMascot
+import com.app.dsalingo.ui.components.DuoCharacter
 import com.app.dsalingo.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,7 +35,7 @@ fun LandingScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "dsalingo",
+                        "Dsalingo",
                         fontWeight = FontWeight.Black,
                         fontSize = 26.sp,
                         color = DuoGreen
@@ -56,14 +60,25 @@ fun LandingScreen(
             item {
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Mascot with animation
-                Box(
-                    modifier = Modifier.size(160.dp),
-                    contentAlignment = Alignment.Center
+                // Mascot with dynamic emotion animation and speech bubble
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    DuoBackpackMascot(
-                        modifier = Modifier.size(140.dp),
-                        speechText = "WELCOME TO DSALINGO!"
+                    DuoCharacter(
+                        emotion = CharacterEmotion.WELCOME,
+                        size = 120.dp,
+                        showAura = true
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    CharacterSpeechBubble(
+                        message = "Welcome to Dsalingoo! Ready to master Data Structures?",
+                        title = "WELCOME!",
+                        backgroundColor = DuoCardBg,
+                        pointerDirection = BubblePointerDirection.UP,
+                        modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
 

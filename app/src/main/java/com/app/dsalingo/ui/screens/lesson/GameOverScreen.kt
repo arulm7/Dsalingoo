@@ -18,7 +18,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.dsalingo.ui.components.CharacterEmotion
+import com.app.dsalingo.ui.components.CharacterSpeechBubble
 import com.app.dsalingo.ui.components.DuoButton
+import com.app.dsalingo.ui.components.DuoCharacter
 import com.app.dsalingo.ui.theme.*
 
 @Composable
@@ -28,17 +31,6 @@ fun GameOverScreen(
     onPracticeRefill: () -> Unit = {},
     onQuit: () -> Unit
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulseHeart")
-    val heartScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.12f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "heartScale"
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -53,10 +45,21 @@ fun GameOverScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = "💔",
-                fontSize = 72.sp,
-                modifier = Modifier.scale(heartScale)
+            // Empathetic Mascot Reaction
+            DuoCharacter(
+                emotion = CharacterEmotion.HEART_LOST,
+                size = 100.dp,
+                showAura = true
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            CharacterSpeechBubble(
+                message = "Don't worry! Everyone makes mistakes when learning DSA. You've got this!",
+                title = "KEEP YOUR HEAD UP",
+                backgroundColor = DuoCardBg,
+                borderColor = DuoInputBorder,
+                modifier = Modifier.fillMaxWidth(0.9f)
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -68,19 +71,19 @@ fun GameOverScreen(
                 color = DuoRed
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             
             Text(
-                text = "You need at least 1 heart to practice lessons. Hearts automatically recharge over time.",
-                fontSize = 14.sp,
+                text = "Hearts automatically recharge over time, or you can practice to earn them back.",
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = DuoSubtext,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 16.dp),
-                lineHeight = 20.sp
+                lineHeight = 18.sp
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Recharge Countdown Card
             Surface(
@@ -90,7 +93,7 @@ fun GameOverScreen(
                 border = androidx.compose.foundation.BorderStroke(1.5.dp, DuoInputBorder)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
+                    modifier = Modifier.padding(18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -105,16 +108,16 @@ fun GameOverScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
                         text = formattedTimeRemaining,
-                        fontSize = 36.sp,
+                        fontSize = 32.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     LinearProgressIndicator(
                         progress = { rechargeProgress },
@@ -163,4 +166,3 @@ fun GameOverScreen(
         }
     }
 }
-

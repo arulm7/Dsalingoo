@@ -133,9 +133,7 @@ fun LessonDetailScreen(
     } else {
         Box(modifier = Modifier.fillMaxSize().background(DuoDarkBg)) {
             if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = DuoGreen)
-                }
+                ShimmerQuestionBody()
             } else if (currentQuestion != null) {
                 Scaffold(
                     containerColor = DuoDarkBg,
@@ -193,9 +191,11 @@ fun LessonDetailScreen(
                     }
                 }
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No questions found for this lesson.", color = DuoSubtext)
-                }
+                ErrorStateView(
+                    message = "No questions found for this lesson. Please check your network connection.",
+                    title = "LESSON UNAVAILABLE",
+                    onRetry = { viewModel.loadQuestions(categoryId, lessonId) }
+                )
             }
         }
     }
@@ -249,9 +249,8 @@ fun DuolingoQuizTopBar(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Hearts Count Pill (Interactive)
+        // Animated Hearts Row (Interactive)
         Surface(
-            modifier = Modifier.clickable { onHeartClick() },
             shape = RoundedCornerShape(12.dp),
             color = DuoCardBg,
             border = androidx.compose.foundation.BorderStroke(1.dp, DuoInputBorder)
@@ -260,20 +259,18 @@ fun DuolingoQuizTopBar(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("❤️", fontSize = 16.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                AnimatedContent(
-                    targetState = hearts,
-                    transitionSpec = { (scaleIn() + fadeIn()).togetherWith(scaleOut() + fadeOut()) },
-                    label = "heartsAnim"
-                ) { targetHearts ->
-                    Text(
-                        targetHearts.toString(),
-                        fontWeight = FontWeight.Black,
-                        color = DuoRed,
-                        fontSize = 15.sp
-                    )
-                }
+                AnimatedHeartsRow(
+                    hearts = hearts,
+                    heartSize = 18.dp,
+                    onHeartClick = onHeartClick
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "$hearts",
+                    fontWeight = FontWeight.Black,
+                    color = DuoRed,
+                    fontSize = 14.sp
+                )
             }
         }
     }
@@ -343,52 +340,32 @@ fun DuolingoQuestionBody(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Speaker Chat Bubble Card
+            // Speaker Chat Bubble with DuoCharacter
+            val promptEmotion = when {
+                showResult && isCorrect -> CharacterEmotion.CORRECT
+                showResult && !isCorrect -> CharacterEmotion.ENCOURAGING
+                selectedOptionIndex != null || textInput.isNotBlank() -> CharacterEmotion.THINKING
+                else -> CharacterEmotion.LESSON_START
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Speaker Avatar
-                Surface(
-                    modifier = Modifier.size(52.dp),
-                    shape = CircleShape,
-                    color = DuoCardBg,
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, DuoInputBorder)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Image(
-                            painter = painterResource(id = R.drawable.duo_pencil),
-                            contentDescription = "Duo",
-                            modifier = Modifier.size(44.dp).clip(CircleShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                        )
-                    }
-                }
+                DuoCharacter(
+                    emotion = promptEmotion,
+                    size = 64.dp,
+                    showAura = true
+                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Prompt Speech Bubble
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    color = DuoCardBg,
-                    border = androidx.compose.foundation.BorderStroke(1.5.dp, DuoInputBorder)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Text("🔊", fontSize = 16.sp, modifier = Modifier.padding(top = 2.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = question.question,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            lineHeight = 22.sp
-                        )
-                    }
-                }
+                CharacterSpeechBubble(
+                    message = question.question,
+                    pointerDirection = BubblePointerDirection.LEFT,
+                    backgroundColor = DuoCardBg,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             if (!question.imageUrl.isNullOrBlank()) {
@@ -639,21 +616,22 @@ fun DuolingoQuestionBody(
             ) {
                 val bannerBg = if (isCorrect) DuoGreen.copy(alpha = 0.18f) else DuoRed.copy(alpha = 0.18f)
                 val iconTint = if (isCorrect) DuoGreen else DuoRed
-                val titleText = if (isCorrect) "Excellent! (+${if (serverXpEarned > 0) serverXpEarned else 10} XP)" else "Incorrect"
+                val titleText = if (isCorrect) "🎉 Correct! +${if (serverXpEarned > 0) serverXpEarned else 10} XP" else "Almost! Try again"
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(bannerBg)
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = if (isCorrect) "✅" else "❌",
-                        fontSize = 28.sp
+                    DuoCharacter(
+                        emotion = if (isCorrect) CharacterEmotion.CORRECT else CharacterEmotion.ENCOURAGING,
+                        size = 52.dp,
+                        showAura = false
                     )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = titleText,
                             fontWeight = FontWeight.Black,
@@ -661,13 +639,21 @@ fun DuolingoQuestionBody(
                             color = iconTint
                         )
                         if (serverExplanation.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = serverExplanation,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Medium,
                                 fontSize = 13.sp,
-                                color = Color.White
+                                color = Color.White,
+                                lineHeight = 18.sp
                             )
                         }
+                    }
+                    if (isCorrect) {
+                        FloatingXPGain(
+                            xpAmount = if (serverXpEarned > 0) serverXpEarned else 10,
+                            trigger = showResult
+                        )
                     }
                 }
             }

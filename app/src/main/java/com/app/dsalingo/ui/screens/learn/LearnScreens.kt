@@ -78,83 +78,95 @@ fun LearnScreen(
     onNavigateToCategory: (String) -> Unit,
     viewModel: LearnViewModel = hiltViewModel()
 ) {
-    val categories by viewModel.categories.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadCategories()
     }
 
-    if (isLoading) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(DuoDarkBg),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = DuoGreen)
+    when (val state = uiState) {
+        is UiState.Loading -> {
+            ShimmerLearningPath()
         }
-    } else {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(DuoDarkBg),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            contentPadding = PaddingValues(bottom = 90.dp)
-        ) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                DuolingoUnitBanner(
-                    sectionNumber = 1,
-                    unitNumber = 1,
-                    title = "Data Structures & Algorithms",
-                    subtitle = "Master the core building blocks of computer science",
-                    themeColor = DuoGreen
+        is UiState.Error -> {
+            ErrorStateView(
+                message = state.message,
+                onRetry = { viewModel.loadCategories() }
+            )
+        }
+        is UiState.Success -> {
+            val categories = state.data
+            if (categories.isEmpty()) {
+                EmptyStateView(
+                    title = "No Categories Available",
+                    message = "We couldn't find any learning categories. Please check back later.",
+                    actionText = "RELOAD",
+                    onAction = { viewModel.loadCategories() }
                 )
-                Spacer(modifier = Modifier.height(28.dp))
-            }
-
-            itemsIndexed(categories) { index, category ->
-                val xOffset = when (index % 5) {
-                    0 -> (-10).dp
-                    1 -> (-45).dp
-                    2 -> (-65).dp
-                    3 -> 0.dp
-                    4 -> 50.dp
-                    else -> 0.dp
-                }
-
-                DuolingoCategoryNode(
-                    category = category,
-                    xOffset = xOffset,
-                    isFirst = index == 0,
-                    onClick = { onNavigateToCategory(category.id) }
-                )
-                Spacer(modifier = Modifier.height(28.dp))
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                // Unit Complete Divider
-                Row(
+            } else {
+                LazyColumn(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 28.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize()
+                        .background(DuoDarkBg),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = 90.dp)
                 ) {
-                    Box(modifier = Modifier.weight(1f).height(1.dp).background(DuoInputBorder))
-                    Text(
-                        text = "SECTION 1 COMPLETE",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        color = DuoSubtext,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-                    Box(modifier = Modifier.weight(1f).height(1.dp).background(DuoInputBorder))
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        DuolingoUnitBanner(
+                            sectionNumber = 1,
+                            unitNumber = 1,
+                            title = "Data Structures & Algorithms",
+                            subtitle = "Master the core building blocks of computer science",
+                            themeColor = DuoGreen
+                        )
+                        Spacer(modifier = Modifier.height(28.dp))
+                    }
+
+                    itemsIndexed(categories) { index, category ->
+                        val xOffset = when (index % 5) {
+                            0 -> (-10).dp
+                            1 -> (-45).dp
+                            2 -> (-65).dp
+                            3 -> 0.dp
+                            4 -> 50.dp
+                            else -> 0.dp
+                        }
+
+                        DuolingoCategoryNode(
+                            category = category,
+                            xOffset = xOffset,
+                            isFirst = index == 0,
+                            onClick = { onNavigateToCategory(category.id) }
+                        )
+                        Spacer(modifier = Modifier.height(28.dp))
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        // Unit Complete Divider
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 28.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.weight(1f).height(1.dp).background(DuoInputBorder))
+                            Text(
+                                text = "SECTION 1 COMPLETE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = DuoSubtext,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                            Box(modifier = Modifier.weight(1f).height(1.dp).background(DuoInputBorder))
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
+        else -> Unit
     }
 }
 
@@ -224,8 +236,11 @@ fun DuolingoCategoryNode(
         // Display Mascot right next to the active node!
         if (isActive) {
             Spacer(modifier = Modifier.width(8.dp))
-            DuoBackpackMascot(
-                speechText = "LET'S CRUSH ${category.title.uppercase()}!"
+            DuoCharacter(
+                emotion = CharacterEmotion.LESSON_START,
+                size = 80.dp,
+                showAura = true,
+                onClick = onClick
             )
         }
     }
@@ -239,36 +254,44 @@ fun CategoryDetailScreen(
     onNavigateToLesson: (String, String) -> Unit,
     viewModel: LearnViewModel = hiltViewModel()
 ) {
-    val categories by viewModel.categories.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadCategories()
     }
 
-    val category = categories.find { it.id == categoryId }
+    when (val state = uiState) {
+        is UiState.Loading -> {
+            ShimmerLearningPath()
+        }
+        is UiState.Error -> {
+            ErrorStateView(
+                message = state.message,
+                onRetry = { viewModel.loadCategories() }
+            )
+        }
+        is UiState.Success -> {
+            val category = state.data.find { it.id == categoryId }
+            if (category == null) {
+                ErrorStateView(
+                    title = "CATEGORY NOT FOUND",
+                    message = "We couldn't find the requested topic. Please return to the learn tab.",
+                    canRetry = true,
+                    onRetry = onNavigateBack
+                )
+            } else {
+                val color = Color(category.color)
+                val darkColor = when(category.color.toLong()) {
+                    0xFF58CC02L -> DuoGreenDark
+                    0xFF1CB0F6L -> DuoBlueDark
+                    0xFFFF9600L -> DuoOrangeDark
+                    0xFFEA2B2BL -> DuoRedDark
+                    else -> color.copy(alpha = 0.8f)
+                }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize().background(DuoDarkBg), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = DuoGreen)
-        }
-    } else if (category == null) {
-        Box(modifier = Modifier.fillMaxSize().background(DuoDarkBg), contentAlignment = Alignment.Center) {
-            Text("Category not found.", color = DuoSubtext)
-        }
-    } else {
-        val color = Color(category.color)
-        val darkColor = when(category.color.toLong()) {
-            0xFF58CC02L -> DuoGreenDark
-            0xFF1CB0F6L -> DuoBlueDark
-            0xFFFF9600L -> DuoOrangeDark
-            0xFFEA2B2BL -> DuoRedDark
-            else -> color.copy(alpha = 0.8f)
-        }
-
-        val totalLessons = if (category.totalQuestions > 0) category.totalQuestions else 10
-        val completedCount = category.completedQuestions
-        var selectedLockedIndex by remember { mutableStateOf<Int?>(null) }
+                val totalLessons = if (category.totalQuestions > 0) category.totalQuestions else 10
+                val completedCount = category.completedQuestions
+                var selectedLockedIndex by remember { mutableStateOf<Int?>(null) }
 
         Scaffold(
             containerColor = DuoDarkBg,
@@ -407,9 +430,12 @@ fun CategoryDetailScreen(
 
                         // Mascot beside active lesson node
                         if (isActive) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            DuoBackpackMascot(
-                                speechText = if (i == 9) "BEAT THE BOSS!" else "LET'S GO!"
+                            Spacer(modifier = Modifier.width(8.dp))
+                            DuoCharacter(
+                                emotion = if (i == 9) CharacterEmotion.BOSS else CharacterEmotion.LESSON_START,
+                                size = 80.dp,
+                                showAura = true,
+                                onClick = { onNavigateToLesson(categoryId, "lesson_$i") }
                             )
                         }
                     }
@@ -438,6 +464,9 @@ fun CategoryDetailScreen(
                 }
             }
         }
+    }
+}
+        else -> Unit
     }
 }
 

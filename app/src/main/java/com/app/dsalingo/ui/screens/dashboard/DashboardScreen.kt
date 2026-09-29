@@ -2,6 +2,7 @@ package com.app.dsalingo.ui.screens.dashboard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -16,9 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.app.dsalingo.R
-import com.app.dsalingo.ui.components.DuoButton
-import com.app.dsalingo.ui.components.DuoSecondaryButton
-import com.app.dsalingo.ui.components.DuoBackpackMascot
+import com.app.dsalingo.ui.components.*
 import com.app.dsalingo.ui.theme.*
 
 @Composable
@@ -26,6 +25,10 @@ fun DashboardScreen(
     onNavigateToLearn: () -> Unit,
     onNavigateToChallenges: () -> Unit
 ) {
+    val currentStreak = 12
+    val currentXp = 35
+    val targetXp = 50
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -34,17 +37,21 @@ fun DashboardScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 90.dp)
     ) {
         item {
-            WelcomeBanner(username = "Learner")
+            CharacterGreetingSection(
+                username = "Learner",
+                streakDays = currentStreak,
+                onContinueClick = onNavigateToLearn
+            )
             Spacer(modifier = Modifier.height(20.dp))
         }
 
         item {
-            StatsRow()
+            DashboardStatsRow(streakDays = currentStreak)
             Spacer(modifier = Modifier.height(20.dp))
         }
 
         item {
-            DailyGoalCard(currentXp = 35, targetXp = 50)
+            DailyGoalCard(currentXp = currentXp, targetXp = targetXp)
             Spacer(modifier = Modifier.height(24.dp))
         }
 
@@ -78,8 +85,24 @@ fun DashboardScreen(
     }
 }
 
+/**
+ * Contextual Mascot Area on the Dashboard with dynamic greeting and quick continue action.
+ */
 @Composable
-fun WelcomeBanner(username: String) {
+fun CharacterGreetingSection(
+    username: String,
+    streakDays: Int,
+    onContinueClick: () -> Unit
+) {
+    // Contextual message calculation
+    val (greetingText, emotion) = remember(streakDays) {
+        when {
+            streakDays >= 10 -> "You're on fire! Keep your $streakDays-day streak alive!" to CharacterEmotion.EXCITED
+            streakDays >= 3 -> "Welcome back, $username! Ready for today's challenge?" to CharacterEmotion.WELCOME
+            else -> "One small lesson today keeps your DSA skills sharp!" to CharacterEmotion.IDLE
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -90,38 +113,55 @@ fun WelcomeBanner(username: String) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            DuoBackpackMascot(
-                modifier = Modifier.size(72.dp),
-                speechText = "WELCOME BACK!"
+            DuoCharacter(
+                emotion = emotion,
+                size = 80.dp,
+                showAura = true,
+                onClick = onContinueClick
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = "Welcome back, $username!",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White
-                )
-                Text(
-                    text = "Ready to crush some DSA problems?",
-                    color = DuoSubtext,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            CharacterSpeechBubble(
+                message = greetingText,
+                title = "WELCOME BACK!",
+                actionText = "CONTINUE",
+                onActionClick = onContinueClick,
+                pointerDirection = BubblePointerDirection.LEFT,
+                backgroundColor = Color(0xFF1B2830),
+                borderColor = DuoInputBorder,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
-fun StatsRow() {
+fun DashboardStatsRow(streakDays: Int) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        StatBadge(icon = "🔥", value = "12", label = "Streak", color = DuoOrange, modifier = Modifier.weight(1f))
-        StatBadge(icon = "👑", value = "45", label = "Crowns", color = AmberGold, modifier = Modifier.weight(1f))
-        StatBadge(icon = "💎", value = "500", label = "Gems", color = DuoBlue, modifier = Modifier.weight(1f))
+        AnimatedStreakBadge(
+            streakDays = streakDays,
+            modifier = Modifier.weight(1f)
+        )
+
+        StatBadge(
+            icon = "👑",
+            value = "45",
+            label = "Crowns",
+            color = AmberGold,
+            modifier = Modifier.weight(1f)
+        )
+
+        StatBadge(
+            icon = "💎",
+            value = "500",
+            label = "Gems",
+            color = DuoBlue,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -166,28 +206,20 @@ fun DailyGoalCard(currentXp: Int, targetXp: Int) {
                     color = DuoSubtext
                 )
                 Text(
-                    text = "$currentXp/$targetXp XP",
+                    text = "$currentXp / $targetXp XP",
                     fontWeight = FontWeight.Black,
                     fontSize = 13.sp,
                     color = AmberGold
                 )
             }
+
             Spacer(modifier = Modifier.height(10.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(DuoInputBg)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth((currentXp.toFloat() / targetXp.toFloat()).coerceIn(0f, 1f))
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(DuoOrange)
-                )
-            }
+
+            AnimatedXPProgressBar(
+                currentXp = currentXp,
+                targetXp = targetXp,
+                barColor = DuoOrange
+            )
         }
     }
 }
