@@ -1,0 +1,45 @@
+[
+  {
+    "id": "ll1",
+    "type": "MULTIPLE_CHOICE",
+    "question": "What is the main advantage of a Linked List over an Array?",
+    "options": ["Random access", "Efficient insertion/deletion", "Lower memory usage", "Cache friendliness"],
+    "correctAnswer": 1,
+    "explanation": "Linked lists allow for O(1) insertion and deletion if the pointer is known, as no shifting of elements is required.",
+    "code": null
+  },
+  {
+    "id": "ll2",
+    "type": "FILL_BLANK",
+    "question": "Each element in a linked list is called a ______.",
+    "correctAnswer": "node",
+    "explanation": "A node contains the data and a reference to the next element.",
+    "code": null
+  },
+  {
+    "id": "ll3",
+    "type": "MULTIPLE_CHOICE",
+    "question": "In a singly linked list, each node points to the ______ node.",
+    "options": ["previous", "head", "next", "tail"],
+    "correctAnswer": 2,
+    "explanation": "A singly linked list only has a pointer to the next node.",
+    "code": null
+  },
+  {
+    "id": "ll4",
+    "type": "FILL_BLANK",
+    "question": "The last node in a singly linked list points to ______.",
+    "correctAnswer": "None",
+    "explanation": "The next pointer of the last node is None (or null) to indicate the end of the list.",
+    "code": null
+  },
+  {
+    "id": "ll5",
+    "type": "MULTIPLE_CHOICE",
+    "question": "What is the time complexity to find an element in a linked list of size n?",
+    "options": ["O(1)", "O(log n)", "O(n)", "O(n log n)"],
+    "correctAnswer": 2,
+    "explanation": "Since we must traverse from the head, searching takes linear time.",
+    "code": null
+  }
+]

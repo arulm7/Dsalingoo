@@ -1,0 +1,45 @@
+[
+  {
+    "id": "b1",
+    "type": "MULTIPLE_CHOICE",
+    "question": "Which of these is used to define a function in Python?",
+    "options": ["func", "define", "def", "function"],
+    "correctAnswer": 2,
+    "explanation": "'def' is the keyword used to define a function in Python.",
+    "code": null
+  },
+  {
+    "id": "b2",
+    "type": "FILL_BLANK",
+    "question": "Python is an ______ language.",
+    "correctAnswer": "interpreted",
+    "explanation": "Python is interpreted, meaning code is executed line by line.",
+    "code": null
+  },
+  {
+    "id": "b3",
+    "type": "MULTIPLE_CHOICE",
+    "question": "Which data type is used to store multiple items in a single variable?",
+    "options": ["int", "float", "list", "bool"],
+    "correctAnswer": 2,
+    "explanation": "A list is used to store multiple items in a single variable in Python.",
+    "code": null
+  },
+  {
+    "id": "b4",
+    "type": "FILL_BLANK",
+    "question": "To output text to the screen, we use the ______ function.",
+    "correctAnswer": "print",
+    "explanation": "The print() function is used to output data to the standard output device.",
+    "code": null
+  },
+  {
+    "id": "b5",
+    "type": "MULTIPLE_CHOICE",
+    "question": "What is the correct extension for Python files?",
+    "options": [".pt", ".pyth", ".py", ".pyt"],
+    "correctAnswer": 2,
+    "explanation": "Python files use the .py extension.",
+    "code": null
+  }
+]

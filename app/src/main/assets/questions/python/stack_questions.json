@@ -1,0 +1,45 @@
+[
+  {
+    "id": "st1",
+    "type": "MULTIPLE_CHOICE",
+    "question": "Which principle does a Stack follow?",
+    "options": ["FIFO (First In First Out)", "LIFO (Last In First Out)", "LILO (Last In Last Out)", "None of the above"],
+    "correctAnswer": 1,
+    "explanation": "Stacks follow the Last In, First Out principle.",
+    "code": null
+  },
+  {
+    "id": "st2",
+    "type": "FILL_BLANK",
+    "question": "The ______ operation is used to add an element to the top of the stack.",
+    "correctAnswer": "push",
+    "explanation": "Push adds an element, and Pop removes the top element.",
+    "code": null
+  },
+  {
+    "id": "st3",
+    "type": "MULTIPLE_CHOICE",
+    "question": "What is the result of popping from an empty stack?",
+    "options": ["None", "0", "Stack Underflow", "Stack Overflow"],
+    "correctAnswer": 2,
+    "explanation": "Trying to remove an element from an empty stack is called stack underflow.",
+    "code": null
+  },
+  {
+    "id": "st4",
+    "type": "FILL_BLANK",
+    "question": "In Python, a list can be used as a stack with ______ for push and pop() for pop.",
+    "correctAnswer": "append",
+    "explanation": "Using append() and pop() on a list implements LIFO behavior.",
+    "code": null
+  },
+  {
+    "id": "st5",
+    "type": "MULTIPLE_CHOICE",
+    "question": "Which operation is used to see the top element without removing it?",
+    "options": ["peek", "look", "top", "view"],
+    "correctAnswer": 0,
+    "explanation": "The peek (or top) operation returns the top element without modifying the stack.",
+    "code": null
+  }
+]
