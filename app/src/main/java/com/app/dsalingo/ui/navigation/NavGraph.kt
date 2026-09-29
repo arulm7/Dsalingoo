@@ -17,10 +17,14 @@ import com.app.dsalingo.ui.screens.learn.LearnScreen
 import com.app.dsalingo.ui.screens.lesson.LessonDetailScreen
 import com.app.dsalingo.ui.screens.profile.ProfileScreen
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.app.dsalingo.ui.MainViewModel
+
 @Composable
 fun NavGraph(
     navController: NavHostController,
-    startDestination: String = Screen.Landing.route
+    startDestination: String = Screen.Landing.route,
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
     NavHost(
         navController = navController,
@@ -95,7 +99,17 @@ fun NavGraph(
                 categoryId = categoryId,
                 lessonId = lessonId,
                 onNavigateBack = { navController.popBackStack() },
-                onLessonComplete = { navController.popBackStack() }
+                onLessonComplete = {
+                    val currentIndex = lessonId.removePrefix("lesson_").toIntOrNull() ?: 0
+                    val nextIndex = currentIndex + 1
+                    if (nextIndex < 10) {
+                        navController.navigate(Screen.LessonDetail.createRoute(categoryId, "lesson_$nextIndex")) {
+                            popUpTo(Screen.CategoryDetail.createRoute(categoryId))
+                        }
+                    } else {
+                        navController.popBackStack()
+                    }
+                }
             )
         }
 
@@ -110,6 +124,7 @@ fun NavGraph(
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onSignOut = {
+                    mainViewModel.logout()
                     navController.navigate(Screen.Landing.route) {
                         popUpTo(0) { inclusive = true }
                     }
@@ -120,6 +135,7 @@ fun NavGraph(
         composable(Screen.AdminDashboard.route) {
             com.app.dsalingo.ui.screens.admin.AdminDashboardScreen(
                 onSignOut = {
+                    mainViewModel.logout()
                     navController.navigate(Screen.Landing.route) {
                         popUpTo(0) { inclusive = true }
                     }

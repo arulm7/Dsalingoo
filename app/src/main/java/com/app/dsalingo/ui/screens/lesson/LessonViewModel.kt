@@ -43,10 +43,12 @@ class LessonViewModel @Inject constructor(
                     _isError.value = true
                 } else {
                     val lessonIndex = lessonId.removePrefix("lesson_").toIntOrNull() ?: 0
-                    val questionsPerLesson = 2
-                    val slicedQuestions = loadedQuestions
-                        .drop(lessonIndex * questionsPerLesson)
-                        .take(questionsPerLesson)
+                    // Slicing 1 question per progressive lesson for focused interactive learning or index-based
+                    val slicedQuestions = if (lessonIndex < loadedQuestions.size) {
+                        listOf(loadedQuestions[lessonIndex])
+                    } else {
+                        loadedQuestions.take(1)
+                    }
                     
                     if (slicedQuestions.isEmpty()) {
                         _isError.value = true
@@ -62,15 +64,40 @@ class LessonViewModel @Inject constructor(
         }
     }
 
-    fun completeQuestion(questionId: String) {
+    fun submitAnswer(
+        questionId: String,
+        answer: Any? = null,
+        interactionState: Map<String, Any>? = null,
+        onResult: (com.app.dsalingo.data.network.QuestionSubmitResponse) -> Unit
+    ) {
         viewModelScope.launch {
-            userRepository.completeQuestion(questionId)
-        }
-    }
+            val user = userRepository.currentUser.value
+            val userId = user?.id?.toIntOrNull() ?: 1
+            val response = repository.submitAnswer(
+                userId = userId,
+                questionId = questionId,
+                answer = answer,
+                interactionState = interactionState
+            )
 
-    fun addXp(xpGain: Int) {
-        viewModelScope.launch {
-            userRepository.updateStats(xpGain = xpGain)
+            if (response != null) {
+                if (response.correct) {
+                    // Refresh user profile asynchronously to update stats
+                    userRepository.fetchProfile()
+                } else {
+                    heartManager.loseHeart()
+                }
+                onResult(response)
+            } else {
+                // Fallback offline / network error response
+                onResult(
+                    com.app.dsalingo.data.network.QuestionSubmitResponse(
+                        success = false,
+                        correct = false,
+                        explanation = "Failed to connect to server for validation."
+                    )
+                )
+            }
         }
     }
 

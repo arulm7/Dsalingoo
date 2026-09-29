@@ -33,11 +33,43 @@ import com.app.dsalingo.ui.theme.*
 fun getLessonCountForCategory(categoryId: String): Int {
     return when(categoryId) {
         "basics" -> 5
-        "array" -> 14
+        "array" -> 10
         "string" -> 8
         "linkedlist" -> 10
         "stack" -> 6
         else -> 5
+    }
+}
+
+fun getArrayLessonTitle(index: Int): String {
+    return when(index) {
+        0 -> "What is an Array?"
+        1 -> "Array Indexing"
+        2 -> "Accessing Elements"
+        3 -> "Updating Elements"
+        4 -> "Appending Elements"
+        5 -> "Inserting Elements"
+        6 -> "Deleting Elements"
+        7 -> "Searching"
+        8 -> "Time Complexity"
+        9 -> "Array Boss Challenge"
+        else -> "Lesson ${index + 1}"
+    }
+}
+
+fun getArrayLessonIcon(index: Int): String {
+    return when(index) {
+        0 -> "⭐"
+        1 -> "🏁"
+        2 -> "🎯"
+        3 -> "✏️"
+        4 -> "➕"
+        5 -> "🏃"
+        6 -> "✂️"
+        7 -> "🔍"
+        8 -> "⏱️"
+        9 -> "👑"
+        else -> "🏆"
     }
 }
 
@@ -234,12 +266,8 @@ fun CategoryDetailScreen(
             else -> color.copy(alpha = 0.8f)
         }
 
-        val questionsPerLesson = 2
-        val totalLessons = if (category.totalQuestions > 0) {
-            (category.totalQuestions + questionsPerLesson - 1) / questionsPerLesson
-        } else 4
-        
-        val completedCount = category.completedQuestions / questionsPerLesson
+        val totalLessons = if (category.totalQuestions > 0) category.totalQuestions else 10
+        val completedCount = category.completedQuestions
         var selectedLockedIndex by remember { mutableStateOf<Int?>(null) }
 
         Scaffold(
@@ -292,6 +320,13 @@ fun CategoryDetailScreen(
                     val isCompleted = i < completedCount
                     val isActive = i == completedCount
                     val isLockedSelected = selectedLockedIndex == i
+                    val lessonTitle = if (categoryId == "array") getArrayLessonTitle(i) else "Lesson ${i + 1}"
+                    val lessonIcon = if (categoryId == "array") getArrayLessonIcon(i) else when (i % 4) {
+                        0 -> "⭐"
+                        1 -> "📖"
+                        2 -> "🎁"
+                        else -> "🏆"
+                    }
 
                     val xOffset = when (i % 5) {
                         0 -> (-10).dp
@@ -316,18 +351,18 @@ fun CategoryDetailScreen(
                             // Active Lesson Tooltip
                             if (isActive && selectedLockedIndex == null) {
                                 DuoSpeechBubble(
-                                    text = "Lesson ${i + 1}",
-                                    buttonText = "START +10 XP",
+                                    text = lessonTitle,
+                                    buttonText = if (i == 9) "BOSS BATTLE 👑" else "START +10 XP",
                                     onButtonClick = { onNavigateToLesson(categoryId, "lesson_$i") },
                                     backgroundColor = color,
-                                    modifier = Modifier.width(180.dp).padding(bottom = 6.dp)
+                                    modifier = Modifier.width(190.dp).padding(bottom = 6.dp)
                                 )
                             }
 
                             // Locked Popover Tooltip
                             if (isLockedSelected) {
                                 DuoSpeechBubble(
-                                    text = "Lesson ${i + 1} is Locked",
+                                    text = "$lessonTitle is Locked",
                                     buttonText = "LOCKED",
                                     onButtonClick = {},
                                     backgroundColor = DuoCardBg,
@@ -345,12 +380,7 @@ fun CategoryDetailScreen(
                             }
 
                             Duo3DNodeButton(
-                                icon = when (i % 4) {
-                                    0 -> "⭐"
-                                    1 -> "📖"
-                                    2 -> "🎁"
-                                    else -> "🏆"
-                                },
+                                icon = lessonIcon,
                                 isUnlocked = !isLocked,
                                 isActive = isActive,
                                 isCompleted = isCompleted,
@@ -365,13 +395,21 @@ fun CategoryDetailScreen(
                                     }
                                 }
                             )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = lessonTitle,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isLocked) DuoSubtext else Color.White
+                            )
                         }
 
                         // Mascot beside active lesson node
                         if (isActive) {
                             Spacer(modifier = Modifier.width(6.dp))
                             DuoBackpackMascot(
-                                speechText = "LET'S GO!"
+                                speechText = if (i == 9) "BEAT THE BOSS!" else "LET'S GO!"
                             )
                         }
                     }

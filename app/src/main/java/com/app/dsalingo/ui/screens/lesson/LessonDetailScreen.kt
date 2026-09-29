@@ -38,6 +38,7 @@ import com.app.dsalingo.data.model.Question
 import com.app.dsalingo.data.model.QuestionType
 import com.app.dsalingo.ui.components.*
 import com.app.dsalingo.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +74,7 @@ fun LessonDetailScreen(
     val currentQuestion = questions.getOrNull(currentQuestionIndex)
     val progress = if (questions.isNotEmpty()) (currentQuestionIndex).toFloat() / questions.size.toFloat() else 0f
 
-    BackHandler { showLeaveDialog = true }
+    var totalLessonXpReward by remember { mutableIntStateOf(50) }
 
     if (showLeaveDialog) {
         AlertDialog(
@@ -125,7 +126,7 @@ fun LessonDetailScreen(
         )
     } else if (isLessonFinished) {
         LessonCompleteScreen(
-            xpReward = 50,
+            xpReward = totalLessonXpReward,
             accuracyPercent = if (questions.isNotEmpty()) ((correctAnswersCount.toFloat() / questions.size) * 100).toInt() else 100,
             onContinue = onLessonComplete
         )
@@ -166,23 +167,24 @@ fun LessonDetailScreen(
                                 question = question,
                                 hearts = hearts,
                                 streakCount = streakCount,
-                                onCorrectAnswer = {
-                                    viewModel.completeQuestion(question.id)
+                                onSubmitAnswer = { answer, interactionState, callback ->
+                                    viewModel.submitAnswer(question.id, answer, interactionState, callback)
+                                },
+                                onCorrectAnswer = { earnedXp ->
                                     correctAnswersCount++
                                     if (question.type != QuestionType.THEORY) {
                                         streakCount++
                                     }
+                                    totalLessonXpReward = if (earnedXp > 0) earnedXp else 20
                                     if (currentQuestionIndex < questions.size - 1) {
                                         currentQuestionIndex++
                                     } else {
-                                        viewModel.addXp(50)
                                         isLessonFinished = true
                                     }
                                 },
                                 onWrongAnswer = {
                                     streakCount = 0
-                                    val remaining = viewModel.loseHeart()
-                                    if (!remaining || viewModel.hearts.value <= 0) {
+                                    if (viewModel.hearts.value <= 0) {
                                         isGameOver = true
                                     }
                                 }
@@ -280,27 +282,33 @@ fun DuolingoQuizTopBar(
 /**
  * Question Body matching Duolingo AssessmentView
  */
+/**
+ * Question Body matching Duolingo AssessmentView with Array Visualizer Integration
+ */
 @Composable
 fun DuolingoQuestionBody(
     question: Question,
     hearts: Int,
     streakCount: Int,
-    onCorrectAnswer: () -> Unit,
+    onSubmitAnswer: (answer: Any?, interactionState: Map<String, Any>?, (com.app.dsalingo.data.network.QuestionSubmitResponse) -> Unit) -> Unit,
+    onCorrectAnswer: (earnedXp: Int) -> Unit,
     onWrongAnswer: () -> Unit
 ) {
     var selectedOptionIndex by remember(question.id) { mutableStateOf<Int?>(null) }
     var textInput by remember(question.id) { mutableStateOf("") }
     
-    var currentArrayItems by remember(question.id) { 
-        mutableStateOf(question.arrayData ?: emptyList()) 
+    val initialArray = remember(question.id) {
+        question.arrayData ?: listOf("10", "20", "30", "40")
     }
-    var availableItems by remember(question.id) { 
-        mutableStateOf(question.items ?: emptyList()) 
-    }
+    val visualizerState = rememberArrayVisualizerState(initialArray)
 
     var showResult by remember(question.id) { mutableStateOf(false) }
     var isCorrect by remember(question.id) { mutableStateOf(false) }
+    var serverExplanation by remember(question.id) { mutableStateOf(question.explanation) }
+    var serverXpEarned by remember(question.id) { mutableIntStateOf(0) }
+    var isSubmitting by remember(question.id) { mutableStateOf(false) }
 
+    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
     Column(
@@ -322,7 +330,7 @@ fun DuolingoQuestionBody(
                 QuestionType.MULTIPLE_CHOICE -> "Select the correct answer"
                 QuestionType.FILL_BLANK -> "Complete the code"
                 QuestionType.CODE_COMPLETION -> "Fill in the blank"
-                QuestionType.ARRAY_INTERACTION -> "Arrange the film elements"
+                QuestionType.ARRAY_INTERACTION -> "Interactive Array Challenge"
                 else -> "Coding Exercise"
             }
 
@@ -445,6 +453,22 @@ fun DuolingoQuestionBody(
                                 fontWeight = FontWeight.Medium
                             )
                         }
+
+                        // Array Visualizer Demonstration for Theory
+                        Text(
+                            text = "INTERACTIVE DEMONSTRATION",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = DuoSubtext,
+                            letterSpacing = 0.5.sp
+                        )
+
+                        ArrayVisualizer(
+                            state = visualizerState,
+                            isInteractive = true,
+                            showControls = true
+                        )
+
                         if (question.code != null) {
                             DuolingoCodeSnippet(question.code)
                         }
@@ -456,6 +480,16 @@ fun DuolingoQuestionBody(
                             is Number -> res.toInt()
                             is String -> res.toDoubleOrNull()?.toInt() ?: -1
                             else -> -1
+                        }
+
+                        // Display Visualizer preview if question has arrayData
+                        if (question.arrayData != null) {
+                            ArrayVisualizer(
+                                state = visualizerState,
+                                isInteractive = false,
+                                showControls = false
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
 
                         question.options?.forEachIndexed { index, optionText ->
@@ -481,7 +515,7 @@ fun DuolingoQuestionBody(
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable(enabled = !showResult) { selectedOptionIndex = index },
+                                    .clickable(enabled = !showResult && !isSubmitting) { selectedOptionIndex = index },
                                 shape = RoundedCornerShape(18.dp),
                                 color = bgColor,
                                 border = androidx.compose.foundation.BorderStroke(
@@ -493,7 +527,6 @@ fun DuolingoQuestionBody(
                                     modifier = Modifier.padding(14.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Number Badge [1], [2], [3]
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
                                         color = DuoCardBg,
@@ -550,34 +583,35 @@ fun DuolingoQuestionBody(
                             value = textInput,
                             onValueChange = { if (!showResult) textInput = it },
                             placeholder = "Type your answer in here...",
-                            enabled = !showResult
+                            enabled = !showResult && !isSubmitting
                         )
                     }
                 }
                 QuestionType.ARRAY_INTERACTION -> {
-                    DuolingoArrayInteractionBody(
-                        currentItems = currentArrayItems,
-                        availableBank = availableItems,
-                        showResult = showResult,
-                        onItemClick = { item: String, fromBank: Boolean ->
-                            if (!showResult) {
-                                if (fromBank) {
-                                    val emptyIndex = currentArrayItems.indexOf("(empty slot)")
-                                    if (emptyIndex != -1) {
-                                        val newList = currentArrayItems.toMutableList()
-                                        newList[emptyIndex] = item
-                                        currentArrayItems = newList
-                                    } else {
-                                        currentArrayItems = currentArrayItems + item
-                                    }
-                                    availableItems = availableItems - item
-                                } else {
-                                    currentArrayItems = currentArrayItems - item
-                                    availableItems = availableItems + item
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text(
+                            text = "YOUR TURN: MANIPULATE THE ARRAY",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = AmberGold,
+                            letterSpacing = 0.5.sp
+                        )
+
+                        ArrayVisualizer(
+                            state = visualizerState,
+                            isInteractive = !showResult && !isSubmitting,
+                            showControls = true,
+                            onElementClick = { index, value ->
+                                coroutineScope.launch {
+                                    visualizerState.access(index)
                                 }
                             }
+                        )
+
+                        if (question.code != null) {
+                            DuolingoCodeSnippet(question.code)
                         }
-                    )
+                    }
                 }
                 else -> {
                     Text(
@@ -591,7 +625,7 @@ fun DuolingoQuestionBody(
             Spacer(modifier = Modifier.height(30.dp))
         }
 
-        // Bottom Action & Feedback Bar (Duolingo Sheet Bar)
+        // Bottom Action & Feedback Bar
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -605,7 +639,7 @@ fun DuolingoQuestionBody(
             ) {
                 val bannerBg = if (isCorrect) DuoGreen.copy(alpha = 0.18f) else DuoRed.copy(alpha = 0.18f)
                 val iconTint = if (isCorrect) DuoGreen else DuoRed
-                val titleText = if (isCorrect) "Excellent!" else "Correct solution:"
+                val titleText = if (isCorrect) "Excellent! (+${if (serverXpEarned > 0) serverXpEarned else 10} XP)" else "Incorrect"
 
                 Row(
                     modifier = Modifier
@@ -626,9 +660,9 @@ fun DuolingoQuestionBody(
                             fontSize = 16.sp,
                             color = iconTint
                         )
-                        if (question.explanation.isNotBlank()) {
+                        if (serverExplanation.isNotBlank()) {
                             Text(
-                                text = question.explanation,
+                                text = serverExplanation,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = Color.White
@@ -658,13 +692,12 @@ fun DuolingoQuestionBody(
                         onClick = {
                             if (isCorrect) {
                                 showResult = false
-                                onCorrectAnswer()
+                                onCorrectAnswer(serverXpEarned)
                             } else {
                                 showResult = false
                                 selectedOptionIndex = null
                                 textInput = ""
-                                currentArrayItems = question.arrayData ?: emptyList()
-                                availableItems = question.items ?: emptyList()
+                                visualizerState.reset()
                             }
                         },
                         color = if (isCorrect) DuoGreen else DuoRed,
@@ -673,57 +706,47 @@ fun DuolingoQuestionBody(
                     )
                 } else {
                     val isTheory = question.type == QuestionType.THEORY
-                    val canCheck = when(question.type) {
+                    val canCheck = when (question.type) {
                         QuestionType.THEORY -> true
                         QuestionType.MULTIPLE_CHOICE -> selectedOptionIndex != null
                         QuestionType.FILL_BLANK, QuestionType.CODE_COMPLETION -> textInput.isNotBlank()
-                        QuestionType.ARRAY_INTERACTION -> currentArrayItems.isNotEmpty() && !currentArrayItems.contains("(empty slot)")
+                        QuestionType.ARRAY_INTERACTION -> visualizerState.elements.isNotEmpty()
                         else -> true
                     }
 
                     DuoButton(
-                        text = if (isTheory) "CONTINUE" else "CHECK",
+                        text = if (isSubmitting) "VALIDATING..." else if (isTheory) "CONTINUE" else "CHECK",
                         onClick = {
-                            if (isTheory) {
-                                isCorrect = true
-                                onCorrectAnswer()
-                            } else {
-                                isCorrect = when (question.type) {
-                                    QuestionType.MULTIPLE_CHOICE -> {
-                                        val correctVal = when (val res = question.correctAnswer) {
-                                            is Number -> res.toInt()
-                                            is String -> res.toDoubleOrNull()?.toInt() ?: -1
-                                            else -> -1
-                                        }
-                                        selectedOptionIndex == correctVal
+                            isSubmitting = true
+                            val answerPayload: Any? = when (question.type) {
+                                QuestionType.THEORY -> ""
+                                QuestionType.MULTIPLE_CHOICE -> selectedOptionIndex
+                                QuestionType.FILL_BLANK, QuestionType.CODE_COMPLETION -> textInput.trim()
+                                QuestionType.ARRAY_INTERACTION -> visualizerState.elements
+                                else -> textInput.trim()
+                            }
+                            val interactionPayload: Map<String, Any>? = when (question.type) {
+                                QuestionType.ARRAY_INTERACTION -> mapOf("array" to visualizerState.elements)
+                                else -> null
+                            }
+
+                            onSubmitAnswer(answerPayload, interactionPayload) { response ->
+                                isSubmitting = false
+                                isCorrect = response.correct
+                                serverExplanation = if (response.explanation.isNotBlank()) response.explanation else question.explanation
+                                serverXpEarned = response.xpAwarded
+
+                                if (isTheory) {
+                                    onCorrectAnswer(if (response.xpAwarded > 0) response.xpAwarded else 10)
+                                } else {
+                                    showResult = true
+                                    if (!response.correct) {
+                                        onWrongAnswer()
                                     }
-                                    QuestionType.FILL_BLANK, QuestionType.CODE_COMPLETION -> {
-                                        val correctStr = when (val res = question.correctAnswer) {
-                                            is Double -> if (res % 1.0 == 0.0) res.toInt().toString() else res.toString()
-                                            else -> res.toString()
-                                        }
-                                        textInput.trim().equals(correctStr, ignoreCase = true)
-                                    }
-                                    QuestionType.ARRAY_INTERACTION -> {
-                                        val correctList = question.correctAnswer as? List<*>
-                                        if (correctList != null) {
-                                            if (correctList.all { it is Number }) {
-                                                val expectedOrder = correctList.map { (it as Number).toInt() }
-                                                val originalItems = question.items ?: emptyList()
-                                                val expectedItems = expectedOrder.map { originalItems[it] }
-                                                currentArrayItems == expectedItems
-                                            } else {
-                                                currentArrayItems == correctList.map { it.toString() }
-                                            }
-                                        } else false
-                                    }
-                                    else -> false
                                 }
-                                if (isCorrect) onCorrectAnswer() else onWrongAnswer()
-                                showResult = true
                             }
                         },
-                        enabled = canCheck,
+                        enabled = canCheck && !isSubmitting,
                         color = DuoGreen,
                         shadowColor = DuoGreenDark,
                         modifier = Modifier.fillMaxWidth()

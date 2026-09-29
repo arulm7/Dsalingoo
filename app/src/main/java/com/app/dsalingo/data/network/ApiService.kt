@@ -28,6 +28,11 @@ interface ApiService {
         @Query("category_id") categoryId: String
     ): List<Question>
 
+    @POST("api/questions.php?action=submit")
+    suspend fun submitQuestionAnswer(
+        @Body request: QuestionSubmitRequest
+    ): QuestionSubmitResponse
+
     // 4. User stats updates
     @POST("api/user.php?action=update_stats")
     suspend fun updateStats(

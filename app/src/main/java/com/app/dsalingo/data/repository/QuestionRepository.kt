@@ -21,4 +21,26 @@ class QuestionRepository @Inject constructor(
             }
         }
     }
+
+    suspend fun submitAnswer(
+        userId: Int,
+        questionId: String,
+        answer: Any? = null,
+        interactionState: Map<String, Any>? = null
+    ): com.app.dsalingo.data.network.QuestionSubmitResponse? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val request = com.app.dsalingo.data.network.QuestionSubmitRequest(
+                    userId = userId,
+                    questionId = questionId,
+                    answer = answer,
+                    interactionState = interactionState
+                )
+                apiService.submitQuestionAnswer(request)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
 }

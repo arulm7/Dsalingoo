@@ -42,7 +42,25 @@ data class CompleteQuestionRequest(
     @SerializedName("question_id") val questionId: String
 )
 
+data class QuestionSubmitRequest(
+    @SerializedName("user_id") val userId: Int,
+    @SerializedName("question_id") val questionId: String,
+    val answer: Any? = null,
+    @SerializedName("interaction_state") val interactionState: Map<String, Any>? = null
+)
 
+data class QuestionSubmitResponse(
+    val success: Boolean = false,
+    val correct: Boolean = false,
+    @SerializedName("xp_awarded") val xpAwarded: Int = 0,
+    @SerializedName("hearts_remaining") val heartsRemaining: Int = 5,
+    @SerializedName("current_xp") val currentXp: Int = 0,
+    val level: Int = 1,
+    val crowns: Int = 0,
+    @SerializedName("lesson_completed") val lessonCompleted: Boolean = false,
+    @SerializedName("next_lesson_unlocked") val nextLessonUnlocked: Boolean = false,
+    val explanation: String = ""
+)
 
 data class StatsUpdateResponse(
     val status: String,

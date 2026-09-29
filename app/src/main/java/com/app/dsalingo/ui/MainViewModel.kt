@@ -17,9 +17,14 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     val currentUser: StateFlow<User?> = userRepository.currentUser
+    val isLoggedIn: Boolean get() = userRepository.isLoggedIn()
     val hearts: StateFlow<Int> = heartManager.hearts
     val secondsRemaining: StateFlow<Int> = heartManager.secondsRemaining
     val isFull: StateFlow<Boolean> = heartManager.isFull
+
+    fun logout() {
+        userRepository.logout()
+    }
 
     fun refreshProfile() {
         viewModelScope.launch {

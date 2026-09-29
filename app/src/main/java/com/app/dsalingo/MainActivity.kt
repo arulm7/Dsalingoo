@@ -23,8 +23,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.app.dsalingo.ui.components.MainScaffold
 
+import androidx.activity.viewModels
+import com.app.dsalingo.ui.MainViewModel
+import com.app.dsalingo.ui.navigation.Screen
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val mainViewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -34,13 +40,18 @@ class MainActivity : ComponentActivity() {
             
             DsalingoTheme(darkTheme = isDarkTheme || systemTheme) {
                 val navController = rememberNavController()
+                val startDestination = if (mainViewModel.isLoggedIn) Screen.Dashboard.route else Screen.Landing.route
+
                 MainScaffold(
                     navController = navController,
                     isDarkTheme = isDarkTheme || systemTheme,
                     onToggleTheme = { isDarkTheme = !isDarkTheme }
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                        NavGraph(navController = navController)
+                        NavGraph(
+                            navController = navController,
+                            startDestination = startDestination
+                        )
                     }
                 }
             }
